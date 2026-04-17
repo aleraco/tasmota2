@@ -69,7 +69,7 @@
 
     function shutdownRaspi() {
         if (confirm("Vuoi spegnere il Raspberry?")) {
-            client.publish('cmnd/raspi/system', 'SHUTDOWN');
+            client.publish('cmnd/aleraco/system', 'SHUTDOWN');
             alert("Comando inviato. Il sistema si arresterà.");
         }
     }
