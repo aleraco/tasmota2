@@ -82,13 +82,14 @@
         Jellyfin ON
     </button>
     
-    <button class="btn btn-custom btn-primary-custom" onclick="send('cmnd/tasmota/Power', 'OFF')">
+    <button class="btn btn-custom btn-outline-danger-custom" onclick="confirmShutdown()">
         Spegni Raspberry
     </button>
-
-    <button class="btn btn-custom btn-outline-danger-custom" onclick="confirmShutdown()">
-        Alimentazione OFF
+    
+    <button class="btn btn-custom btn-primary-custom" onclick="send('cmnd/tasmota/Power', 'OFF')">
+        alimentazione OFF    
     </button>
+
 </div>
 
 <script>
