@@ -3,39 +3,111 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Aleraco</title>
+    <title>Aleraco Hub</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    
     <style>
-        body { font-family: sans-serif; background: #121212; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background: #1e1e1e; padding: 2rem; border-radius: 20px; text-align: center; width: 300px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .btn { width: 100%; padding: 15px; margin: 10px 0; border-radius: 10px; border: none; font-size: 1.1rem; font-weight: bold; cursor: pointer; }
-        .btn-on { background: #4caf50; color: white; }
-        .btn-off { background: #f44336; color: white; }
-        .btn-shutdown { background: transparent; border: 1px solid #ff5252; color: #ff5252; margin-top: 20px; font-size: 0.8rem; }
+        body { 
+            background-color: #f8f9fa; 
+            font-family: 'Inter', sans-serif; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            height: 100vh; 
+            margin: 0;
+        }
+        .control-card {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 24px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.05);
+            width: 100%;
+            max-width: 380px;
+            text-align: center;
+        }
+        .status-dot {
+            height: 10px;
+            width: 10px;
+            background-color: #dee2e6;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+        .online { background-color: #2ecc71; box-shadow: 0 0 8px #2ecc71; }
+        
+        .btn-custom {
+            border-radius: 12px;
+            padding: 12px;
+            font-weight: 600;
+            transition: all 0.2s;
+            margin-bottom: 1rem;
+            width: 100%;
+        }
+        .btn-primary-custom {
+            background-color: #007AFF;
+            border: none;
+            color: white;
+        }
+        .btn-primary-custom:active {
+            transform: scale(0.98);
+            background-color: #0056b3;
+        }
+        .btn-outline-danger-custom {
+            color: #FF3B30;
+            border: 1px solid #FF3B30;
+            background: transparent;
+            font-size: 0.85rem;
+            margin-top: 1.5rem;
+        }
+        .btn-outline-danger-custom:hover {
+            background-color: #FF3B30;
+            color: white;
+        }
+        h2 { font-weight: 600; color: #1d1d1f; margin-bottom: 0.5rem; }
+        p { color: #86868b; font-size: 0.9rem; margin-bottom: 2rem; }
     </style>
 </head>
 <body>
 
-<div class="card">
-    <h2>Controllo Casa</h2>
-    <div id="status" style="font-size: 0.7rem; color: #666; margin-bottom: 20px;">CONNESSIONE...</div>
+<div class="control-card">
+    <h2>Casa Aleraco</h2>
+    <div class="mb-4">
+        <span id="dot" class="status-dot"></span>
+        <small id="status-text" class="text-muted">Connessione...</small>
+    </div>
+
+    <button class="btn btn-custom btn-primary-custom" onclick="send('cmnd/tasmota/Power', 'ON')">
+        Accendi Luce
+    </button>
     
-    <button class="btn btn-on" onclick="send('cmnd/tasmota/Power', 'ON')">ACCENDI SISTEMA</button>
-    
-    <button class="btn btn-shutdown" onclick="confirmShutdown()">🛑 SPEGNI RASPBERRY</button>
-    <hr style="border: 0; border-top: 1px solid #333; margin: 20px 0;">
-    
-    <button class="btn btn-off" onclick="send('cmnd/tasmota/Power', 'OFF')">SPEGNI ALIMENTAZIONE</button>
+    <button class="btn btn-custom btn-primary-custom" onclick="send('cmnd/tasmota/Power', 'OFF')">
+        Spegni Luce
+    </button>
+
+    <button class="btn btn-custom btn-outline-danger-custom" onclick="confirmShutdown()">
+        Spegnimento Sistema
+    </button>
 </div>
 
 <script>
+    // Configurazione HiveMQ
     const client = mqtt.connect('wss://65371a5291b54c35acd05f6e347252e4.s1.eu.hivemq.cloud:8884/mqtt', {
         username: 'tasmota',
         password: 'Alitalia*1'
     });
 
     client.on('connect', () => {
-        document.getElementById('status').innerText = "SISTEMA ONLINE";
+        document.getElementById('dot').classList.add('online');
+        document.getElementById('status-text').innerText = "Sistema Online";
+        document.getElementById('status-text').classList.replace('text-muted', 'text-success');
+    });
+
+    client.on('offline', () => {
+        document.getElementById('dot').classList.remove('online');
+        document.getElementById('status-text').innerText = "Offline";
+        document.getElementById('status-text').classList.add('text-muted');
     });
 
     function send(topic, msg) {
@@ -43,9 +115,10 @@
     }
 
     function confirmShutdown() {
-        if (confirm("Sei sicuro di voler spegnere il Raspberry? Dopo dovrai riaccenderlo dalla presa.")) {
+        if (confirm("Sei sicuro? Il Raspberry si spegnerà e la presa si scollegherà dopo 20 secondi.")) {
+            // Inviamo al topic che abbiamo testato con successo
             send('cmnd/jellyfin/system', 'SHUTDOWN');
-            alert("Comando inviato!");
+            alert("Comando inviato. Ciao ciao!");
         }
     }
 </script>
