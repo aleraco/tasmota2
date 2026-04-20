@@ -21,11 +21,11 @@
     <div id="status" style="font-size: 0.7rem; color: #666; margin-bottom: 20px;">CONNESSIONE...</div>
     
     <button class="btn btn-on" onclick="send('cmnd/tasmota/Power', 'ON')">ACCENDI SISTEMA</button>
-    <button class="btn btn-off" onclick="send('cmnd/tasmota/Power', 'OFF')">SPEGNI SISTEMA</button>
     
+    <button class="btn btn-shutdown" onclick="confirmShutdown()">🛑 SPEGNI RASPBERRY</button>
     <hr style="border: 0; border-top: 1px solid #333; margin: 20px 0;">
     
-    <button class="btn btn-shutdown" onclick="confirmShutdown()">🛑 SPEGNI SISTEMA</button>
+    <button class="btn btn-off" onclick="send('cmnd/tasmota/Power', 'OFF')">SPEGNI ALIMENTAZIONE</button>
 </div>
 
 <script>
