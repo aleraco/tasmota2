@@ -3,76 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Controllo Casa</title>
+    <title>Dashboard Aleraco</title>
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #1a1a1a; color: #e0e0e0; margin: 0; }
-        .card { background: #2d2d2d; padding: 2.5rem; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.6); text-align: center; width: 320px; border: 1px solid #404040; }
-        h2 { margin-top: 0; font-weight: 300; }
-        .status-box { margin-bottom: 25px; padding: 12px; border-radius: 10px; font-weight: bold; font-size: 0.85rem; text-transform: uppercase; }
-        .online { background: rgba(76, 175, 80, 0.2); color: #4caf50; border: 1px solid #4caf50; }
-        .offline { background: rgba(244, 67, 54, 0.2); color: #f44336; border: 1px solid #f44336; }
-        #btn-rele { width: 140px; height: 140px; border-radius: 50%; border: none; font-weight: bold; cursor: pointer; font-size: 1.4rem; transition: 0.3s; margin: 10px 0; outline: none; }
-        .btn-on { background-color: #4caf50; color: white; box-shadow: 0 0 20px rgba(76, 175, 80, 0.4); }
-        .btn-off { background-color: #f44336; color: white; opacity: 0.8; }
-        .btn-shutdown { background: transparent; color: #ff5252; border: 1px solid #ff5252; padding: 10px; border-radius: 8px; cursor: pointer; margin-top: 30px; width: 100%; font-size: 0.8rem; }
-        .btn-shutdown:hover { background: #ff5252; color: white; }
+        body { font-family: sans-serif; background: #121212; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: #1e1e1e; padding: 2rem; border-radius: 20px; text-align: center; width: 300px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .btn { width: 100%; padding: 15px; margin: 10px 0; border-radius: 10px; border: none; font-size: 1.1rem; font-weight: bold; cursor: pointer; }
+        .btn-on { background: #4caf50; color: white; }
+        .btn-off { background: #f44336; color: white; }
+        .btn-shutdown { background: transparent; border: 1px solid #ff5252; color: #ff5252; margin-top: 20px; font-size: 0.8rem; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>Presa Tasmota</h2>
-    <div id="network-status" class="status-box offline">RETE: DISCONNESSO</div>
-    <button id="btn-rele" onclick="toggleRele()">...</button>
-    <p id="label-rele">Sincronizzazione...</p>
+    <h2>Controllo Casa</h2>
+    <div id="status" style="font-size: 0.7rem; color: #666; margin-bottom: 20px;">CONNESSIONE...</div>
     
-    <hr style="border:0; border-top:1px solid #444; margin: 20px 0;">
-    <button class="btn-shutdown" onclick="shutdownRaspi()">🛑 SPEGNI RASPBERRY</button>
+    <button class="btn btn-on" onclick="send('cmnd/tasmota/Power', 'ON')">ACCENDI SISTEMA</button>
+    <button class="btn btn-off" onclick="send('cmnd/tasmota/Power', 'OFF')">SPEGNI SISTEMA</button>
+    
+    <hr style="border: 0; border-top: 1px solid #333; margin: 20px 0;">
+    
+    <button class="btn btn-shutdown" onclick="confirmShutdown()">🛑 SPEGNI SISTEMA</button>
 </div>
 
 <script>
-    const clusterUrl = 'wss://65371a5291b54c35acd05f6e347252e4.s1.eu.hivemq.cloud:8884/mqtt';
-    const options = {
-        clientId: 'web_client_' + Math.random().toString(16).substr(2, 8),
+    const client = mqtt.connect('wss://65371a5291b54c35acd05f6e347252e4.s1.eu.hivemq.cloud:8884/mqtt', {
         username: 'tasmota',
-        password: 'Alitalia*1',
-    };
-
-    const client = mqtt.connect(clusterUrl, options);
-    let currentStatus = "OFF";
+        password: 'Alitalia*1'
+    });
 
     client.on('connect', () => {
-        client.subscribe('stat/tasmota/POWER');
-        client.subscribe('tele/tasmota/LWT');
-        client.publish('cmnd/tasmota/Power', '');
+        document.getElementById('status').innerText = "SISTEMA ONLINE";
     });
 
-    client.on('message', (topic, message) => {
-        const msg = message.toString();
-        if (topic.includes('LWT')) {
-            document.getElementById('network-status').innerText = `RETE: ${msg}`;
-            document.getElementById('network-status').className = `status-box ${msg.toLowerCase() === 'online' ? 'online' : 'offline'}`;
-        }
-        if (topic.includes('POWER')) {
-            currentStatus = msg.toUpperCase();
-            const btn = document.getElementById('btn-rele');
-            btn.innerText = currentStatus;
-            btn.className = currentStatus === "ON" ? "btn-on" : "btn-off";
-            document.getElementById('label-rele').innerText = `Il relè è ${currentStatus}`;
-        }
-    });
-
-    function toggleRele() {
-        client.publish('cmnd/tasmota/Power', currentStatus === "ON" ? "OFF" : "ON");
+    function send(topic, msg) {
+        client.publish(topic, msg);
     }
 
-    function shutdownRaspi() {
-        if (confirm("Vuoi spegnere il Raspberry?")) {
-            client.publish('cmnd/aleraco/system', 'SHUTDOWN');
-            alert("Comando inviato. Il sistema si arresterà.");
+    function confirmShutdown() {
+        if (confirm("Sei sicuro di voler spegnere il Raspberry? Dopo dovrai riaccenderlo dalla presa.")) {
+            send('cmnd/jellyfin/system', 'SHUTDOWN');
+            alert("Comando inviato!");
         }
     }
 </script>
+
 </body>
 </html>
