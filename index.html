@@ -79,15 +79,15 @@
     </div>
 
     <button class="btn btn-custom btn-primary-custom" onclick="send('cmnd/tasmota/Power', 'ON')">
-        Accendi Luce
+        Jellyfin ON
     </button>
     
     <button class="btn btn-custom btn-primary-custom" onclick="send('cmnd/tasmota/Power', 'OFF')">
-        Spegni Luce
+        Spegni Raspberry
     </button>
 
     <button class="btn btn-custom btn-outline-danger-custom" onclick="confirmShutdown()">
-        Spegnimento Sistema
+        Alimentazione OFF
     </button>
 </div>
 
@@ -115,7 +115,7 @@
     }
 
     function confirmShutdown() {
-        if (confirm("Sei sicuro? Il Raspberry si spegnerà e la presa si scollegherà dopo 20 secondi.")) {
+        if (confirm("Sei sicuro? Il Raspberry si spegnerà e la presa si scollegherà dopo 15 secondi.")) {
             // Inviamo al topic che abbiamo testato con successo
             send('cmnd/jellyfin/system', 'SHUTDOWN');
             alert("Comando inviato. Ciao ciao!");
