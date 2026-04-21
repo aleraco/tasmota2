@@ -73,18 +73,18 @@
 <body>
 
 <div class="control-card">
-    <h2>Casa Aleraco</h2>
+    <h2>Casa Raco-Sabia</h2>
     <div class="mb-4">
         <span id="dot" class="status-dot"></span>
         <small id="status-text" class="text-muted">Connessione...</small>
     </div>
 
     <button id="btn-accendi" class="btn btn-custom btn-on" onclick="send('cmnd/tasmota/Power', 'ON')">
-        Accendi Luce
+        Accensione e avvio Jellyfin
     </button>
     
     <button id="btn-spegni" class="btn btn-custom btn-off" onclick="handleOffClick()">
-        Spegni Luce
+        Alimentazione OFF
     </button>
 
     <hr id="divider">
@@ -166,7 +166,7 @@
     function resetOffBtn() {
         const btn = document.getElementById('btn-spegni');
         offStage = 0;
-        btn.innerText = "Spegni Luce";
+        btn.innerText = "Alimentazione OFF";
         btn.classList.remove('confirm');
     }
 
