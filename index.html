@@ -90,7 +90,7 @@
     <hr id="divider">
 
     <button id="btn-spegni" class="btn btn-custom btn-off" onclick="handleOffClick()">
-        Alimentazione OFF
+        Cut-OFF Power forzato
     </button>
 
     <div id="countdown-box">
@@ -166,7 +166,7 @@
     function resetOffBtn() {
         const btn = document.getElementById('btn-spegni');
         offStage = 0;
-        btn.innerText = "Alimentazione OFF";
+        btn.innerText = "Cut-OFF Power forzato";
         btn.classList.remove('confirm');
     }
 
