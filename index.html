@@ -7,196 +7,178 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     
     <style>
         body { 
             background-color: #f8f9fa; 
             font-family: 'Inter', sans-serif; 
+            height: 100vh; 
+            margin: 0; 
             display: flex; 
             align-items: center; 
             justify-content: center; 
-            height: 100vh; 
-            margin: 0;
         }
-        .control-card {
-            background: white;
-            padding: 2.5rem;
-            border-radius: 24px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.05);
-            width: 100%;
-            max-width: 380px;
-            text-align: center;
+        .control-card { 
+            background: white; 
+            padding: 2.5rem; 
+            border-radius: 24px; 
+            box-shadow: 0 10px 40px rgba(0,0,0,0.05); 
+            width: 100%; 
+            max-width: 380px; 
+            text-align: center; 
         }
-        .status-dot {
-            height: 10px; width: 10px;
-            background-color: #dee2e6;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 5px;
+        .btn-custom { 
+            border-radius: 12px; 
+            padding: 12px; 
+            font-weight: 600; 
+            transition: all 0.2s; 
+            margin-bottom: 1rem; 
+            width: 100%; 
+            border: none; 
+        }
+        .btn-primary-custom { background-color: #007AFF; color: white; }
+        .btn-primary-custom:active { transform: scale(0.98); }
+        .btn-off.confirm { background-color: #FF9500; color: white; }
+        .btn-shutdown { 
+            color: #FF3B30; 
+            border: 1px solid #FF3B30; 
+            background: transparent; 
+            font-size: 0.85rem; 
+            margin-top: 1.5rem; 
+        }
+        /* Gestione Visibilità */
+        #app-content { display: none; }
+        #login-screen { display: block; }
+        .status-dot { 
+            height: 10px; width: 10px; 
+            background-color: #dee2e6; 
+            border-radius: 50%; 
+            display: inline-block; 
+            margin-right: 5px; 
         }
         .online { background-color: #2ecc71; box-shadow: 0 0 8px #2ecc71; }
-        
-        .btn-custom {
-            border-radius: 12px;
-            padding: 12px;
-            font-weight: 600;
-            transition: all 0.2s;
-            margin-bottom: 1rem;
-            width: 100%;
-            border: none;
-            display: none; /* Nascondiamo tutto di default */
-        }
-        .btn-on { background-color: #007AFF; color: white; }
-        .btn-off { background-color: #007AFF; color: white; }
-        .btn-off.confirm { background-color: #FF9500; color: white; }
-
-        .btn-shutdown {
-            color: #FF3B30;
-            border: 1px solid #FF3B30;
-            background: transparent;
-            font-size: 0.85rem;
-            margin-top: 1.5rem;
-        }
-
-        #countdown-box {
-            display: none;
-            margin-top: 1rem;
-            padding: 10px;
-            border-radius: 12px;
-            background-color: #fff2f1;
-            color: #FF3B30;
-            font-weight: 600;
-        }
-        hr { display: none; } /* Nascondiamo anche la linea di default */
+        .form-control { border-radius: 10px; padding: 10px; }
     </style>
 </head>
 <body>
 
-<div class="control-card">
-    <h2>Casa Raco-Sabia</h2>
+<div id="login-screen" class="control-card">
+    <h2 class="mb-2">Aleraco Hub</h2>
+    <p class="text-muted mb-4">Inserisci la chiave per sbloccare</p>
+    <form id="login-form" onsubmit="event.preventDefault(); checkPassword();">
+        <input type="password" id="password-input" class="form-control mb-3" placeholder="Chiave segreta" autocomplete="current-password">
+        <button type="submit" class="btn btn-primary-custom btn-custom">Sblocca con FaceID</button>
+    </form>
+</div>
+
+<div id="app-content" class="control-card">
+    <h2>Controllo Casa</h2>
     <div class="mb-4">
         <span id="dot" class="status-dot"></span>
         <small id="status-text" class="text-muted">Connessione...</small>
     </div>
 
-    <button id="btn-accendi" class="btn btn-custom btn-on" onclick="send('cmnd/tasmota/Power', 'ON')">
-        Accensione e avvio Jellyfin
-    </button>
+    <button id="btn-accendi" class="btn btn-custom btn-primary-custom" onclick="send('cmnd/tasmota/Power', 'ON')" style="display:none;">Accendi Luce</button>
+    <button id="btn-spegni" class="btn btn-custom btn-off btn-primary-custom" onclick="handleOffClick()" style="display:none;">Spegni Luce</button>
     
-    <button id="btn-shutdown" class="btn btn-custom btn-shutdown" onclick="confirmShutdown()">
-        Spegnimento Sistema
-    </button>
+    <hr id="divider" style="display:none;">
+    
+    <button id="btn-shutdown" class="btn btn-custom btn-shutdown" onclick="confirmShutdown()" style="display:none;">Spegnimento Sistema</button>
 
-    <hr id="divider">
-
-    <button id="btn-spegni" class="btn btn-custom btn-off" onclick="handleOffClick()">
-        Cut-OFF Power forzato
-    </button>
-
-    <div id="countdown-box">
-        Sequenza avviata: <span id="timer">15</span>s
+    <div id="countdown-box" style="display:none; margin-top: 1rem; padding: 10px; border-radius: 12px; background-color: #fff2f1; color: #FF3B30; font-weight: 600;">
+        Spegnimento tra: <span id="timer">15</span>s
     </div>
 </div>
 
 <script>
-    const client = mqtt.connect('wss://65371a5291b54c35acd05f6e347252e4.s1.eu.hivemq.cloud:8884/mqtt', {
-        username: 'tasmota',
-        password: 'Alitalia*1'
-    });
+    // Il tuo Hash segreto configurato
+    const SECRET_HASH = "a26f41dab72b01cc29634862abf58177de75b53b6af7e4412b3f12774d413d0d"; 
 
-    const TOPIC_STAT = 'stat/tasmota/POWER';
+    function checkPassword() {
+        const input = document.getElementById('password-input').value;
+        const hashedInput = CryptoJS.SHA256(input).toString();
 
-    client.on('connect', () => {
-        document.getElementById('dot').classList.add('online');
-        document.getElementById('status-text').innerText = "Sistema Online";
-        document.getElementById('status-text').classList.replace('text-muted', 'text-success');
-        
-        // Ci iscriviamo allo stato della presa
-        client.subscribe(TOPIC_STAT);
-        // Chiediamo lo stato attuale appena ci connettiamo
-        client.publish('cmnd/tasmota/Power', ''); 
-    });
-
-    // Logica Ricezione Messaggi per aggiornare l'interfaccia
-    client.on('message', (topic, message) => {
-        if (topic === TOPIC_STAT) {
-            const state = message.toString(); // "ON" oppure "OFF"
-            updateUI(state);
-        }
-    });
-
-    function updateUI(state) {
-        const btnAccendi = document.getElementById('btn-accendi');
-        const btnSpegni = document.getElementById('btn-spegni');
-        const btnShutdown = document.getElementById('btn-shutdown');
-        const divider = document.getElementById('divider');
-
-        if (state === 'ON') {
-            btnAccendi.style.display = 'none';
-            btnSpegni.style.display = 'block';
-            btnShutdown.style.display = 'block';
-            divider.style.display = 'block';
+        if (hashedInput === SECRET_HASH) {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('app-content').style.display = 'block';
+            startMQTT();
         } else {
-            btnAccendi.style.display = 'block';
-            btnSpegni.style.display = 'none';
-            btnShutdown.style.display = 'none';
-            divider.style.display = 'none';
+            alert("Accesso negato: chiave errata.");
+            document.getElementById('password-input').value = "";
         }
     }
 
-    function send(topic, msg) { client.publish(topic, msg); }
+    let client;
+    function startMQTT() {
+        // Connessione attiva solo dopo il login
+        client = mqtt.connect('wss://65371a5291b54c35acd05f6e347252e4.s1.eu.hivemq.cloud:8884/mqtt', {
+            username: 'tasmota',
+            password: 'Alitalia*1'
+        });
 
-    let offStage = 0;
-    let offTimeout;
+        client.on('connect', () => {
+            document.getElementById('dot').classList.add('online');
+            document.getElementById('status-text').innerText = "Online";
+            client.subscribe('stat/tasmota/POWER');
+            // Chiedi lo stato attuale
+            client.publish('cmnd/tasmota/Power', '');
+        });
 
+        client.on('message', (topic, message) => {
+            if (topic === 'stat/tasmota/POWER') updateUI(message.toString());
+        });
+    }
+
+    function updateUI(state) {
+        const isON = (state === 'ON');
+        document.getElementById('btn-accendi').style.display = isON ? 'none' : 'block';
+        document.getElementById('btn-spegni').style.display = isON ? 'block' : 'none';
+        document.getElementById('btn-shutdown').style.display = isON ? 'block' : 'none';
+        document.getElementById('divider').style.display = isON ? 'block' : 'none';
+    }
+
+    function send(topic, msg) { if(client) client.publish(topic, msg); }
+
+    // Doppio Tap per Spegni Luce
+    let offStage = 0; let offTimeout;
     function handleOffClick() {
         const btn = document.getElementById('btn-spegni');
         if (offStage === 0) {
-            offStage = 1;
-            btn.innerText = "Sicuro di spegnere?";
-            btn.classList.add('confirm');
+            offStage = 1; btn.innerText = "Sicuro di spegnere?"; btn.classList.add('confirm');
             offTimeout = setTimeout(() => { resetOffBtn(); }, 3000);
         } else {
-            clearTimeout(offTimeout);
-            send('cmnd/tasmota/Power', 'OFF');
-            resetOffBtn();
+            clearTimeout(offTimeout); send('cmnd/tasmota/Power', 'OFF'); resetOffBtn();
         }
     }
-
     function resetOffBtn() {
         const btn = document.getElementById('btn-spegni');
-        offStage = 0;
-        btn.innerText = "Cut-OFF Power forzato";
-        btn.classList.remove('confirm');
+        offStage = 0; btn.innerText = "Spegni Luce"; btn.classList.remove('confirm');
     }
 
+    // Shutdown con Countdown
     function confirmShutdown() {
-        if (confirm("Sei sicuro? Il Raspberry si spegnerà e la presa si scollegherà dopo 15 secondi.")) {
-            const btn = document.getElementById('btn-shutdown');
-            const box = document.getElementById('countdown-box');
-            const timerSpan = document.getElementById('timer');
-            
+        if (confirm("Attenzione: spegnerai il Raspberry e l'alimentazione tra 15 secondi. Procedere?")) {
+            document.getElementById('btn-shutdown').disabled = true;
             document.getElementById('btn-spegni').style.display = "none";
-            btn.disabled = true;
-            box.style.display = "block";
+            document.getElementById('countdown-box').style.display = "block";
             
             send('cmnd/jellyfin/system', 'SHUTDOWN');
 
             let timeLeft = 15;
             const interval = setInterval(() => {
-                timeLeft--;
-                timerSpan.innerText = timeLeft;
-                if (timeLeft <= 0) {
-                    clearInterval(interval);
-                    box.innerHTML = "✅ Raspberry spento, power OFF";
-                    box.style.backgroundColor = "#d4edda";
-                    box.style.color = "#155724";
-                    btn.style.display = "none";
+                timeLeft--; 
+                document.getElementById('timer').innerText = timeLeft;
+                if (timeLeft <= 0) { 
+                    clearInterval(interval); 
+                    document.getElementById('countdown-box').innerHTML = "✅ Raspberry spento, alimentazione OFF"; 
+                    document.getElementById('countdown-box').style.backgroundColor = "#d4edda";
+                    document.getElementById('countdown-box').style.color = "#155724";
+                    document.getElementById('btn-shutdown').style.display = "none";
                 }
             }, 1000);
         }
     }
 </script>
-
 </body>
 </html>
