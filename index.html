@@ -50,50 +50,63 @@
             border: none;
             color: white;
         }
-        .btn-primary-custom:active {
-            transform: scale(0.98);
-            background-color: #0056b3;
-        }
-        .btn-outline-danger-custom {
+        .btn-primary-custom:active { transform: scale(0.98); }
+
+        /* Stile per il tasto di spegnimento a due stadi */
+        .btn-shutdown {
+            background-color: transparent;
             color: #FF3B30;
             border: 1px solid #FF3B30;
-            background: transparent;
-            font-size: 0.85rem;
             margin-top: 1.5rem;
+            font-size: 0.85rem;
         }
-        .btn-outline-danger-custom:hover {
+        .btn-shutdown.confirm {
             background-color: #FF3B30;
             color: white;
+            animation: pulse 1s infinite;
         }
-        h2 { font-weight: 600; color: #1d1d1f; margin-bottom: 0.5rem; }
-        p { color: #86868b; font-size: 0.9rem; margin-bottom: 2rem; }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+
+        #countdown-box {
+            display: none;
+            margin-top: 1rem;
+            padding: 10px;
+            border-radius: 12px;
+            background-color: #fff2f1;
+            color: #FF3B30;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
 
-<div class="control-card">
+<div class="control-card" id="main-card">
     <h2>Casa Aleraco</h2>
     <div class="mb-4">
         <span id="dot" class="status-dot"></span>
         <small id="status-text" class="text-muted">Connessione...</small>
     </div>
 
-    <button class="btn btn-custom btn-primary-custom" onclick="send('cmnd/tasmota/Power', 'ON')">
-        Jellyfin ON
-    </button>
-    
-    <button class="btn btn-custom btn-outline-danger-custom" onclick="confirmShutdown()">
-        Spegni Raspberry
-    </button>
-    
-    <button class="btn btn-custom btn-primary-custom" onclick="send('cmnd/tasmota/Power', 'OFF')">
-        Alimentazione OFF    
+    <button class="btn btn-custom btn-primary-custom" onclick="send('cmnd/tasmota/Power', 'ON')">Accendi Luce</button>
+    <button class="btn btn-custom btn-primary-custom" onclick="send('cmnd/tasmota/Power', 'OFF')">Spegni Luce</button>
+
+    <hr class="my-4">
+
+    <button id="shutdown-btn" class="btn btn-custom btn-shutdown" onclick="handleShutdownClick()">
+        Spegnimento Sistema
     </button>
 
+    <div id="countdown-box">
+        Sequenza avviata: <span id="timer">15</span>s
+    </div>
 </div>
 
 <script>
-    // Configurazione HiveMQ
     const client = mqtt.connect('wss://65371a5291b54c35acd05f6e347252e4.s1.eu.hivemq.cloud:8884/mqtt', {
         username: 'tasmota',
         password: 'Alitalia*1'
@@ -105,22 +118,64 @@
         document.getElementById('status-text').classList.replace('text-muted', 'text-success');
     });
 
-    client.on('offline', () => {
-        document.getElementById('dot').classList.remove('online');
-        document.getElementById('status-text').innerText = "Offline";
-        document.getElementById('status-text').classList.add('text-muted');
-    });
+    function send(topic, msg) { client.publish(topic, msg); }
 
-    function send(topic, msg) {
-        client.publish(topic, msg);
+    let shutdownStage = 0;
+    let shutdownTimeout;
+
+    function handleShutdownClick() {
+        const btn = document.getElementById('shutdown-btn');
+        
+        if (shutdownStage === 0) {
+            // Primo Tap
+            shutdownStage = 1;
+            btn.innerText = "Tocca di nuovo per confermare";
+            btn.classList.add('confirm');
+            
+            // Se non tocca di nuovo entro 3 secondi, resetta
+            shutdownTimeout = setTimeout(() => {
+                resetShutdownBtn();
+            }, 3000);
+        } else {
+            // Secondo Tap (Confermato)
+            clearTimeout(shutdownTimeout);
+            startShutdownSequence();
+        }
     }
 
-    function confirmShutdown() {
-        if (confirm("Sei sicuro? Il Raspberry si spegnerà e la presa si scollegherà dopo 15 secondi.")) {
-            // Inviamo al topic che abbiamo testato con successo
-            send('cmnd/jellyfin/system', 'SHUTDOWN');
-            alert("Comando inviato. Ciao ciao!");
-        }
+    function resetShutdownBtn() {
+        const btn = document.getElementById('shutdown-btn');
+        shutdownStage = 0;
+        btn.innerText = "Spegnimento Sistema";
+        btn.classList.remove('confirm');
+        btn.disabled = false;
+    }
+
+    function startShutdownSequence() {
+        const btn = document.getElementById('shutdown-btn');
+        const box = document.getElementById('countdown-box');
+        const timerSpan = document.getElementById('timer');
+        
+        btn.disabled = true;
+        btn.innerText = "Comando inviato";
+        box.style.display = "block";
+        
+        // Invio comando MQTT al Raspberry
+        send('cmnd/jellyfin/system', 'SHUTDOWN');
+
+        let timeLeft = 15;
+        const interval = setInterval(() => {
+            timeLeft--;
+            timerSpan.innerText = timeLeft;
+
+            if (timeLeft <= 0) {
+                clearInterval(interval);
+                box.innerHTML = "✅ Raspberry spento, alimentazione OFF";
+                box.style.backgroundColor = "#d4edda";
+                box.style.color = "#155724";
+                btn.style.display = "none";
+            }
+        }, 1000);
     }
 </script>
 
