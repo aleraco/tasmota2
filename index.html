@@ -28,8 +28,7 @@
             text-align: center;
         }
         .status-dot {
-            height: 10px;
-            width: 10px;
+            height: 10px; width: 10px;
             background-color: #dee2e6;
             border-radius: 50%;
             display: inline-block;
@@ -44,32 +43,20 @@
             transition: all 0.2s;
             margin-bottom: 1rem;
             width: 100%;
-        }
-        .btn-primary-custom {
-            background-color: #007AFF;
             border: none;
-            color: white;
         }
-        .btn-primary-custom:active { transform: scale(0.98); }
+        .btn-on { background-color: #007AFF; color: white; }
+        
+        /* Stile per lo Spegni Luce a due stadi */
+        .btn-off { background-color: #007AFF; color: white; }
+        .btn-off.confirm { background-color: #FF9500; color: white; } /* Arancione avviso */
 
-        /* Stile per il tasto di spegnimento a due stadi */
         .btn-shutdown {
-            background-color: transparent;
             color: #FF3B30;
             border: 1px solid #FF3B30;
-            margin-top: 1.5rem;
+            background: transparent;
             font-size: 0.85rem;
-        }
-        .btn-shutdown.confirm {
-            background-color: #FF3B30;
-            color: white;
-            animation: pulse 1s infinite;
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.02); }
-            100% { transform: scale(1); }
+            margin-top: 1.5rem;
         }
 
         #countdown-box {
@@ -85,19 +72,24 @@
 </head>
 <body>
 
-<div class="control-card" id="main-card">
+<div class="control-card">
     <h2>Casa Aleraco</h2>
     <div class="mb-4">
         <span id="dot" class="status-dot"></span>
         <small id="status-text" class="text-muted">Connessione...</small>
     </div>
 
-    <button class="btn btn-custom btn-primary-custom" onclick="send('cmnd/tasmota/Power', 'ON')">Accendi Luce</button>
-    <button class="btn btn-custom btn-primary-custom" onclick="send('cmnd/tasmota/Power', 'OFF')">Spegni Luce</button>
+    <button class="btn btn-custom btn-on" onclick="send('cmnd/tasmota/Power', 'ON')">
+        Accendi Luce
+    </button>
+    
+    <button id="off-btn" class="btn btn-custom btn-off" onclick="handleOffClick()">
+        Spegni Luce
+    </button>
 
-    <hr class="my-4">
+    <hr>
 
-    <button id="shutdown-btn" class="btn btn-custom btn-shutdown" onclick="handleShutdownClick()">
+    <button id="shutdown-btn" class="btn btn-custom btn-shutdown" onclick="confirmShutdown()">
         Spegnimento Sistema
     </button>
 
@@ -120,62 +112,59 @@
 
     function send(topic, msg) { client.publish(topic, msg); }
 
-    let shutdownStage = 0;
-    let shutdownTimeout;
+    // Logica Doppio Tap per SPEGNI LUCE
+    let offStage = 0;
+    let offTimeout;
 
-    function handleShutdownClick() {
-        const btn = document.getElementById('shutdown-btn');
-        
-        if (shutdownStage === 0) {
-            // Primo Tap
-            shutdownStage = 1;
-            btn.innerText = "Tocca di nuovo per confermare";
+    function handleOffClick() {
+        const btn = document.getElementById('off-btn');
+        if (offStage === 0) {
+            offStage = 1;
+            btn.innerText = "Sicuro di spegnere?";
             btn.classList.add('confirm');
-            
-            // Se non tocca di nuovo entro 3 secondi, resetta
-            shutdownTimeout = setTimeout(() => {
-                resetShutdownBtn();
+            offTimeout = setTimeout(() => {
+                resetOffBtn();
             }, 3000);
         } else {
-            // Secondo Tap (Confermato)
-            clearTimeout(shutdownTimeout);
-            startShutdownSequence();
+            clearTimeout(offTimeout);
+            send('cmnd/tasmota/Power', 'OFF');
+            resetOffBtn();
         }
     }
 
-    function resetShutdownBtn() {
-        const btn = document.getElementById('shutdown-btn');
-        shutdownStage = 0;
-        btn.innerText = "Spegnimento Sistema";
+    function resetOffBtn() {
+        const btn = document.getElementById('off-btn');
+        offStage = 0;
+        btn.innerText = "Spegni Luce";
         btn.classList.remove('confirm');
-        btn.disabled = false;
     }
 
-    function startShutdownSequence() {
-        const btn = document.getElementById('shutdown-btn');
-        const box = document.getElementById('countdown-box');
-        const timerSpan = document.getElementById('timer');
-        
-        btn.disabled = true;
-        btn.innerText = "Comando inviato";
-        box.style.display = "block";
-        
-        // Invio comando MQTT al Raspberry
-        send('cmnd/jellyfin/system', 'SHUTDOWN');
+    // Logica SHUTDOWN con Countdown
+    function confirmShutdown() {
+        if (confirm("Sei sicuro? Il Raspberry si spegnerà e la presa si scollegherà dopo 15 secondi.")) {
+            const btn = document.getElementById('shutdown-btn');
+            const box = document.getElementById('countdown-box');
+            const timerSpan = document.getElementById('timer');
+            
+            btn.disabled = true;
+            box.style.display = "block";
+            
+            send('cmnd/jellyfin/system', 'SHUTDOWN');
 
-        let timeLeft = 15;
-        const interval = setInterval(() => {
-            timeLeft--;
-            timerSpan.innerText = timeLeft;
+            let timeLeft = 15;
+            const interval = setInterval(() => {
+                timeLeft--;
+                timerSpan.innerText = timeLeft;
 
-            if (timeLeft <= 0) {
-                clearInterval(interval);
-                box.innerHTML = "✅ Raspberry spento, alimentazione OFF";
-                box.style.backgroundColor = "#d4edda";
-                box.style.color = "#155724";
-                btn.style.display = "none";
-            }
-        }, 1000);
+                if (timeLeft <= 0) {
+                    clearInterval(interval);
+                    box.innerHTML = "✅ Raspberry spento, alimentazione OFF";
+                    box.style.backgroundColor = "#d4edda";
+                    box.style.color = "#155724";
+                    btn.style.display = "none";
+                }
+            }, 1000);
+        }
     }
 </script>
 
