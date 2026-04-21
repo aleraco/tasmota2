@@ -44,12 +44,11 @@
             margin-bottom: 1rem;
             width: 100%;
             border: none;
+            display: none; /* Nascondiamo tutto di default */
         }
         .btn-on { background-color: #007AFF; color: white; }
-        
-        /* Stile per lo Spegni Luce a due stadi */
         .btn-off { background-color: #007AFF; color: white; }
-        .btn-off.confirm { background-color: #FF9500; color: white; } /* Arancione avviso */
+        .btn-off.confirm { background-color: #FF9500; color: white; }
 
         .btn-shutdown {
             color: #FF3B30;
@@ -68,6 +67,7 @@
             color: #FF3B30;
             font-weight: 600;
         }
+        hr { display: none; } /* Nascondiamo anche la linea di default */
     </style>
 </head>
 <body>
@@ -79,17 +79,17 @@
         <small id="status-text" class="text-muted">Connessione...</small>
     </div>
 
-    <button class="btn btn-custom btn-on" onclick="send('cmnd/tasmota/Power', 'ON')">
+    <button id="btn-accendi" class="btn btn-custom btn-on" onclick="send('cmnd/tasmota/Power', 'ON')">
         Accendi Luce
     </button>
     
-    <button id="off-btn" class="btn btn-custom btn-off" onclick="handleOffClick()">
+    <button id="btn-spegni" class="btn btn-custom btn-off" onclick="handleOffClick()">
         Spegni Luce
     </button>
 
-    <hr>
+    <hr id="divider">
 
-    <button id="shutdown-btn" class="btn btn-custom btn-shutdown" onclick="confirmShutdown()">
+    <button id="btn-shutdown" class="btn btn-custom btn-shutdown" onclick="confirmShutdown()">
         Spegnimento Sistema
     </button>
 
@@ -104,27 +104,58 @@
         password: 'Alitalia*1'
     });
 
+    const TOPIC_STAT = 'stat/tasmota/POWER';
+
     client.on('connect', () => {
         document.getElementById('dot').classList.add('online');
         document.getElementById('status-text').innerText = "Sistema Online";
         document.getElementById('status-text').classList.replace('text-muted', 'text-success');
+        
+        // Ci iscriviamo allo stato della presa
+        client.subscribe(TOPIC_STAT);
+        // Chiediamo lo stato attuale appena ci connettiamo
+        client.publish('cmnd/tasmota/Power', ''); 
     });
+
+    // Logica Ricezione Messaggi per aggiornare l'interfaccia
+    client.on('message', (topic, message) => {
+        if (topic === TOPIC_STAT) {
+            const state = message.toString(); // "ON" oppure "OFF"
+            updateUI(state);
+        }
+    });
+
+    function updateUI(state) {
+        const btnAccendi = document.getElementById('btn-accendi');
+        const btnSpegni = document.getElementById('btn-spegni');
+        const btnShutdown = document.getElementById('btn-shutdown');
+        const divider = document.getElementById('divider');
+
+        if (state === 'ON') {
+            btnAccendi.style.display = 'none';
+            btnSpegni.style.display = 'block';
+            btnShutdown.style.display = 'block';
+            divider.style.display = 'block';
+        } else {
+            btnAccendi.style.display = 'block';
+            btnSpegni.style.display = 'none';
+            btnShutdown.style.display = 'none';
+            divider.style.display = 'none';
+        }
+    }
 
     function send(topic, msg) { client.publish(topic, msg); }
 
-    // Logica Doppio Tap per SPEGNI LUCE
     let offStage = 0;
     let offTimeout;
 
     function handleOffClick() {
-        const btn = document.getElementById('off-btn');
+        const btn = document.getElementById('btn-spegni');
         if (offStage === 0) {
             offStage = 1;
             btn.innerText = "Sicuro di spegnere?";
             btn.classList.add('confirm');
-            offTimeout = setTimeout(() => {
-                resetOffBtn();
-            }, 3000);
+            offTimeout = setTimeout(() => { resetOffBtn(); }, 3000);
         } else {
             clearTimeout(offTimeout);
             send('cmnd/tasmota/Power', 'OFF');
@@ -133,19 +164,19 @@
     }
 
     function resetOffBtn() {
-        const btn = document.getElementById('off-btn');
+        const btn = document.getElementById('btn-spegni');
         offStage = 0;
         btn.innerText = "Spegni Luce";
         btn.classList.remove('confirm');
     }
 
-    // Logica SHUTDOWN con Countdown
     function confirmShutdown() {
         if (confirm("Sei sicuro? Il Raspberry si spegnerà e la presa si scollegherà dopo 15 secondi.")) {
-            const btn = document.getElementById('shutdown-btn');
+            const btn = document.getElementById('btn-shutdown');
             const box = document.getElementById('countdown-box');
             const timerSpan = document.getElementById('timer');
             
+            document.getElementById('btn-spegni').style.display = "none";
             btn.disabled = true;
             box.style.display = "block";
             
@@ -155,7 +186,6 @@
             const interval = setInterval(() => {
                 timeLeft--;
                 timerSpan.innerText = timeLeft;
-
                 if (timeLeft <= 0) {
                     clearInterval(interval);
                     box.innerHTML = "✅ Raspberry spento, alimentazione OFF";
