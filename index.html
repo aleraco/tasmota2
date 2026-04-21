@@ -79,12 +79,14 @@
         <small id="status-text" class="text-muted">Connessione...</small>
     </div>
 
-    <button id="btn-accendi" class="btn btn-custom btn-primary-custom" onclick="send('cmnd/tasmota/Power', 'ON')" style="display:none;">Accendi Luce</button>
-    <button id="btn-spegni" class="btn btn-custom btn-off btn-primary-custom" onclick="handleOffClick()" style="display:none;">Spegni Luce</button>
+    <button id="btn-accendi" class="btn btn-custom btn-primary-custom" onclick="send('cmnd/tasmota/Power', 'ON')" style="display:none;">Power ON & Avvio</button>
+
+    <button id="btn-shutdown" class="btn btn-custom btn-shutdown" onclick="confirmShutdown()" style="display:none;">Spegnimento Sistema</button>
     
     <hr id="divider" style="display:none;">
     
-    <button id="btn-shutdown" class="btn btn-custom btn-shutdown" onclick="confirmShutdown()" style="display:none;">Spegnimento Sistema</button>
+    <button id="btn-spegni" class="btn btn-custom btn-off btn-primary-custom" onclick="handleOffClick()" style="display:none;">Power OFF forzato</button>
+    
 
     <div id="countdown-box" style="display:none; margin-top: 1rem; padding: 10px; border-radius: 12px; background-color: #fff2f1; color: #FF3B30; font-weight: 600;">
         Spegnimento tra: <span id="timer">15</span>s
@@ -153,7 +155,7 @@
     }
     function resetOffBtn() {
         const btn = document.getElementById('btn-spegni');
-        offStage = 0; btn.innerText = "Spegni Luce"; btn.classList.remove('confirm');
+        offStage = 0; btn.innerText = "Power OFF forzato"; btn.classList.remove('confirm');
     }
 
     // Shutdown con Countdown
