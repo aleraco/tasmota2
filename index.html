@@ -160,7 +160,7 @@
 
     // Shutdown con Countdown
     function confirmShutdown() {
-        if (confirm("Attenzione: spegnerai il Raspberry e l'alimentazione tra 15 secondi. Procedere?")) {
+        if (confirm("Vuoi effettuare lo spegnimento di sistema del Raspberry ed conseguentemente il cut-off dell'alimentazione?")) {
             document.getElementById('btn-shutdown').disabled = true;
             document.getElementById('btn-spegni').style.display = "none";
             document.getElementById('countdown-box').style.display = "block";
